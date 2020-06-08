@@ -9,15 +9,18 @@
 var serial = {};
 
 (function() {
-  'use strict';  
-    return navigator.usb.requestDevice({filters:[]}).then(devices => {
+  'use strict';
+
+  serial.getPorts = function() {
+    return navigator.usb.getDevices().then(devices => {
       return devices.map(device => new serial.Port(device));
-    })
-  }
+    });
+  };
 
   serial.requestPort = function() {
     const filters = [
-      { 'vendorId': 0xDEAD, 'productId': 0xBEEF },
+      { 'vendorId': 0x2fe3, 'productId': 0x0100 },
+      { 'vendorId': 0x2fe3, 'productId': 0x00a },
       { 'vendorId': 0x8086, 'productId': 0xF8A1 },
     ];
     return navigator.usb.requestDevice({ 'filters': filters }).then(
@@ -31,7 +34,10 @@ var serial = {};
 
   serial.Port.prototype.connect = function() {
     let readLoop = () => {
-      this.device_.transferIn(3, 64).then(result => {
+      const {
+        endpointNumber
+      } = this.device_.configuration.interfaces[0].alternate.endpoints[0]
+      this.device_.transferIn(endpointNumber, 64).then(result => {
         this.onReceive(result.data);
         readLoop();
       }, error => {
@@ -45,30 +51,21 @@ var serial = {};
             return this.device_.selectConfiguration(1);
           }
         })
-        .then(() => this.device_.claimInterface(2))
-        .then(() => this.device_.controlTransferOut({
-            'requestType': 'class',
-            'recipient': 'interface',
-            'request': 0x22,
-            'value': 0x01,
-            'index': 0x02}))
+        .then(() => this.device_.claimInterface(0))
         .then(() => {
           readLoop();
         });
   };
 
   serial.Port.prototype.disconnect = function() {
-    return this.device_.controlTransferOut({
-            'requestType': 'class',
-            'recipient': 'interface',
-            'request': 0x22,
-            'value': 0x00,
-            'index': 0x02})
-        .then(() => this.device_.close());
+    return this.device_.close();
   };
 
   serial.Port.prototype.send = function(data) {
-    return this.device_.transferOut(2, data);
+    const {
+      endpointNumber
+    } = this.device_.configuration.interfaces[0].alternate.endpoints[1]
+    return this.device_.transferOut(endpointNumber, data);
   };
 })();
 
