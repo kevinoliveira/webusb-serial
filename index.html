@@ -13,7 +13,7 @@ var serial = {};
     return navigator.usb.requestDevice({filters:[]}).then(devices => {
       return devices.map(device => new serial.Port(device));
     });
-  };
+  }
 
   serial.requestPort = function() {
     const filters = [
