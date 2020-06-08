@@ -12,8 +12,8 @@ var serial = {};
   'use strict';
 
   serial.getPorts = function() {
-    return navigator.usb.requestDevice({filters:[]}).then(devices => {
-      return devices.map(device => new serial.Port(device));
+    return navigator.usb.requestDevice({filters:[]}).then(device => {
+      return [new serial.Port(device)];
     });
   };
 
